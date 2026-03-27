@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pengembaraan Taman Kata Sendi</title>
+    <style>
+        :root {
+            --primary-green: #4CAF50;
+            --flower-pink: #FF69B4;
+            --sky-blue: #87CEEB;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: var(--sky-blue);
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB 0%, #e1f5fe 50%, #9ccc65 50%, #4caf50 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #map-area {
+            width: 90%;
+            height: 60%;
+            background: rgba(255, 255, 255, 0.3);
+            border: 5px solid white;
+            border-radius: 20px;
+            position: relative;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .character {
+            font-size: 50px;
+            position: absolute;
+            transition: all 0.5s ease;
+            z-index: 10;
+        }
+
+        .flower {
+            font-size: 40px;
+            position: absolute;
+        }
+
+        #quiz-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            width: 85%;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            text-align: center;
+            display: none;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary-green);
+            color: white;
+            cursor: pointer;
+            active-transform: scale(0.95);
+        }
+
+        #start-btn {
+            font-size: 24px;
+            padding: 20px 40px;
+            background: var(--flower-pink);
+        }
+
+        #stats {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="stats">Soalan: <span id="q-count">0</span>/20</div>
+    
+    <div id="map-area" id="touch-zone">
+        <div id="player" class="character">🏃‍♂️</div>
+        <div id="start-screen">
+            <h1 style="color: white; text-shadow: 2px 2px 4px #000;">Taman Kata Sendi</h1>
+            <button id="start-btn" onclick="startGame()">Mula Pengembaraan</button>
+        </div>
+    </div>
+
+    <div id="quiz-card">
+        <h3 id="question-text">Soalan di sini...</h3>
+        <div class="options-grid" id="options-container">
+            </div>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { q: "Ali berjalan ___ sekolah.", a: "ke", ops: ["ke", "kepada", "dari", "di"] },
+        { q: "Surat itu dikirimkan ___ ibunya.", a: "kepada", ops: ["ke", "kepada", "pada", "daripada"] },
+        { q: "Bas itu datang ___ arah utara.", a: "dari", ops: ["dari", "daripada", "di", "ke"] },
+        { q: "Meja itu diperbuat ___ kayu jati.", a: "daripada", ops: ["dari", "daripada", "pada", "di"] },
+        { q: "Buku itu ada ___ atas meja.", a: "di", ops: ["di", "pada", "ke", "dari"] },
+        { q: "Kita mesti hormat ___ guru.", a: "kepada", ops: ["ke", "kepada", "pada", "di"] },
+        { q: "Dia sampai ___ pukul 8 malam.", a: "pada", ops: ["di", "pada", "ke", "dari"] },
+        { q: "Ibu pulang ___ pejabat.", a: "dari", ops: ["dari", "daripada", "ke", "di"] },
+        { q: "Adik melompat ___ dalam kolam.", a: "ke", ops: ["ke", "kepada", "di", "pada"] },
+        { q: "Perbezaan ___ mereka sangat ketara.", a: "antara", ops: ["dari", "daripada", "di", "ke"] }, // Bonus: antara
+        { q: "Kami menetap ___ Kuala Lumpur.", a: "di", ops: ["di", "pada", "ke", "dari"] },
+        { q: "Hadiah ini ___ bapa.", a: "daripada", ops: ["dari", "daripada", "kepada", "di"] },
+        { q: "Tolong hantar borang ini ___ kaunter.", a: "ke", ops: ["ke", "kepada", "di", "pada"] },
+        { q: "Kucing itu tidur ___ bawah kerusi.", a: "di", ops: ["di", "pada", "ke", "dari"] },
+        { q: "Suhu jatuh ___ paras beku.", a: "ke", ops: ["ke", "kepada", "pada", "di"] },
+        { q: "Dia lebih tinggi ___ abangnya.", a: "daripada", ops: ["dari", "daripada", "di", "pada"] },
+        { q: "Kami menunggu ___ stesen bas.", a: "di", ops: ["di", "pada", "ke", "dari"] },
+        { q: "Cincin itu diperbuat ___ emas.", a: "daripada", ops: ["dari", "daripada", "di", "ke"] },
+        { q: "Sila tumpukan perhatian ___ pelajaran.", a: "pada", ops: ["di", "pada", "ke", "kepada"] },
+        { q: "Ali berasal ___ Sarawak.", a: "dari", ops: ["dari", "daripada", "di", "ke"] }
+    ];
+
+    let currentQ = 0;
+    const player = document.getElementById('player');
+    const quizCard = document.getElementById('quiz-card');
+    const mapArea = document.getElementById('map-area');
+
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        nextLocation();
+    }
+
+    function nextLocation() {
+        if (currentQ >= questions.length) {
+            alert("Tahniah! Anda telah menamatkan pengembaraan taman!");
+            location.reload();
+            return;
+        }
+
+        // Gerakkan karakter ke posisi rawak (Simulasi pengembaraan)
+        const x = Math.random() * 70 + 10;
+        const y = Math.random() * 70 + 10;
+        player.style.left = x + "%";
+        player.style.top = y + "%";
+
+        // Tunjuk soalan selepas animasi gerak
+        setTimeout(() => {
+            showQuiz();
+        }, 600);
+    }
+
+    function showQuiz() {
+        const q = questions[currentQ];
+        document.getElementById('question-text').innerText = q.q;
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        
+        q.ops.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt);
+            container.appendChild(btn);
+        });
+
+        quizCard.style.display = 'block';
+    }
+
+    function checkAnswer(ans) {
+        if (ans === questions[currentQ].a) {
+            alert("Betul! 🌸");
+            currentQ++;
+            document.getElementById('q-count').innerText = currentQ;
+            quizCard.style.display = 'none';
+            
+            // Tambah bunga di peta sebagai tanda kejayaan
+            const flower = document.createElement('div');
+            flower.className = 'flower';
+            flower.innerHTML = '🌸';
+            flower.style.left = player.style.left;
+            flower.style.top = player.style.top;
+            mapArea.appendChild(flower);
+
+            nextLocation();
+        } else {
+            alert("Cuba lagi! ❌");
+        }
+    }
+</script>
+
+</body>
+</html>
